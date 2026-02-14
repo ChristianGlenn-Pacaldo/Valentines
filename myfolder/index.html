@@ -141,6 +141,8 @@
         .yes-btn {
             background: linear-gradient(135deg, #ff1493, #ff69b4);
             color: white;
+            position: relative;
+            z-index: 100;
         }
 
         .yes-btn:hover {
@@ -152,25 +154,30 @@
             background: linear-gradient(135deg, #ddd, #bbb);
             color: #666;
             position: absolute;
+            z-index: 50;
         }
 
         .playful-text {
             position: fixed;
             top: 20px;
-            right: 20px;
+            left: 50%;
+            transform: translateX(-50%);
             font-size: 1.5em;
             color: #ff1493;
             font-weight: bold;
             animation: bounce 0.5s;
             z-index: 1000;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px 20px;
+            border-radius: 15px;
         }
 
         @keyframes bounce {
             0%, 100% {
-                transform: translateY(0);
+                transform: translateX(-50%) translateY(0);
             }
             50% {
-                transform: translateY(-10px);
+                transform: translateX(-50%) translateY(-10px);
             }
         }
 
@@ -280,6 +287,7 @@
             background: #ff1493;
             position: absolute;
             animation: confetti-fall 3s linear;
+            z-index: 5;
         }
 
         @keyframes confetti-fall {
@@ -304,11 +312,22 @@
             cursor: pointer;
             box-shadow: 0 5px 15px rgba(255, 105, 180, 0.3);
             transition: all 0.3s ease;
-            z-index: 1000;
+            z-index: 10000;
         }
 
         .music-control:hover {
             transform: scale(1.1);
+            animation: wiggle 0.5s ease;
+        }
+
+        .music-control:active {
+            transform: scale(0.95);
+        }
+
+        @keyframes wiggle {
+            0%, 100% { transform: rotate(0deg) scale(1.1); }
+            25% { transform: rotate(-10deg) scale(1.1); }
+            75% { transform: rotate(10deg) scale(1.1); }
         }
 
         .music-icon {
@@ -337,10 +356,33 @@
                 max-width: 150px;
                 font-size: 0.9em;
             }
+
+            .playful-text {
+                font-size: 1.2em;
+            }
         }
 
         .hidden {
             display: none;
+        }
+
+        .music-note {
+            position: absolute;
+            font-size: 20px;
+            animation: music-float 3s ease-in-out;
+            pointer-events: none;
+            z-index: 9999;
+        }
+
+        @keyframes music-float {
+            0% {
+                transform: translateY(0) rotate(0deg);
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(-100px) rotate(360deg);
+                opacity: 0;
+            }
         }
     </style>
 </head>
@@ -381,7 +423,7 @@
                 </div>
                 <div class="receipt-item">
                     <span class="receipt-label">Status:</span>
-                    <span class="receipt-static">Officially My Valentine 💖</span>
+                    <span class="receipt-static">Officially Dating !! 💖</span>
                 </div>
                 <div class="signature">
                     ✨ Forever Yours ✨
@@ -395,11 +437,61 @@
         <span class="music-icon" id="music-icon">🔇</span>
     </div>
 
+    <!-- Audio element - MUST be in same folder! -->
     <audio id="bg-music" loop>
-        <source src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQQAAAA=" type="audio/wav">
+        <source src="dandelion.mp3" type="audio/mpeg">
     </audio>
 
     <script>
+        let isPlaying = false;
+        const music = document.getElementById('bg-music');
+        const icon = document.getElementById('music-icon');
+
+        // Set volume
+        music.volume = 0.5;
+
+        // Music control - SIMPLIFIED AND WORKING!
+        function toggleMusic() {
+            if (isPlaying) {
+                music.pause();
+                icon.textContent = '🔇';
+                isPlaying = false;
+            } else {
+                music.play()
+                    .then(() => {
+                        icon.textContent = '🎵';
+                        isPlaying = true;
+                        createMusicNotes();
+                    })
+                    .catch(() => {
+                        alert('Click the music button again! Sometimes browsers need a second click. 🎵');
+                    });
+            }
+        }
+
+        // Create floating music notes when playing
+        function createMusicNotes() {
+            if (!isPlaying) return;
+            
+            const musicControl = document.querySelector('.music-control');
+            const rect = musicControl.getBoundingClientRect();
+            const note = document.createElement('div');
+            note.className = 'music-note';
+            note.textContent = ['♪', '♫', '🎵', '🎶'][Math.floor(Math.random() * 4)];
+            note.style.left = rect.left + rect.width / 2 + 'px';
+            note.style.top = rect.top + 'px';
+            note.style.color = ['#ff69b4', '#ff1493', '#ffc0cb'][Math.floor(Math.random() * 3)];
+            document.body.appendChild(note);
+
+            setTimeout(() => {
+                note.remove();
+            }, 3000);
+
+            if (isPlaying) {
+                setTimeout(createMusicNotes, 1500);
+            }
+        }
+
         // Create floating hearts
         function createHearts() {
             const heartsContainer = document.getElementById('hearts-bg');
@@ -435,11 +527,11 @@
             const container = document.getElementById('button-container');
             const containerRect = container.getBoundingClientRect();
             
-            const maxX = containerRect.width - noBtn.offsetWidth;
-            const maxY = containerRect.height - noBtn.offsetHeight;
+            const maxX = containerRect.width - noBtn.offsetWidth - 20;
+            const maxY = containerRect.height - noBtn.offsetHeight - 20;
             
-            const randomX = Math.random() * maxX;
-            const randomY = Math.random() * maxY;
+            const randomX = Math.max(0, Math.random() * maxX);
+            const randomY = Math.max(0, Math.random() * maxY);
             
             noBtn.style.left = randomX + 'px';
             noBtn.style.top = randomY + 'px';
@@ -511,23 +603,7 @@
             const boyfriendName = document.getElementById('boyfriend-name').value || 'Your Valentine';
             const date = document.getElementById('current-date').textContent;
 
-            alert(`💝 Receipt saved to your heart! 💝\n\n${girlfriendName} & ${boyfriendName}\n${date}\n\nStatus: Officially My Valentine 💖\n\nForever Yours ✨`);
-        }
-
-        // Music control
-        let isPlaying = false;
-        function toggleMusic() {
-            const music = document.getElementById('bg-music');
-            const icon = document.getElementById('music-icon');
-            
-            if (isPlaying) {
-                music.pause();
-                icon.textContent = '🔇';
-            } else {
-                music.play();
-                icon.textContent = '🎵';
-            }
-            isPlaying = !isPlaying;
+            alert(`💝 Receipt saved to your heart! 💝\n\n${girlfriendName} & ${boyfriendName}\n${date}\n\nStatus: Officially Dating ! 💖\n\nForever Yours ✨`);
         }
 
         // Initialize
